@@ -30,6 +30,16 @@ const credentialFile = "./Credencial.json"
 // importTempFile mirrors the "file.pdf" temp download of the original.
 const importTempFile = "file.pdf"
 
+// readCredentials loads the Google service-account JSON from the
+// GOOGLE_CREDENTIALS_JSON env var when set, otherwise from Credencial.json
+// on disk (legacy manual-container layout).
+func readCredentials() ([]byte, error) {
+	if raw := os.Getenv("GOOGLE_CREDENTIALS_JSON"); raw != "" {
+		return []byte(raw), nil
+	}
+	return os.ReadFile(credentialFile)
+}
+
 // ReadFileService mirrors ReadFileService.cs.
 type ReadFileService struct {
 	books     repository.BookStore
@@ -49,7 +59,7 @@ func NewReadFileService(books repository.BookStore, pages repository.PageStore, 
 }
 
 func newDriveService(ctx context.Context) (*drive.Service, error) {
-	cred, err := os.ReadFile(credentialFile)
+	cred, err := readCredentials()
 	if err != nil {
 		return nil, err
 	}
