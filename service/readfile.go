@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -32,9 +33,17 @@ const importTempFile = "file.pdf"
 
 // readCredentials loads the Google service-account JSON from the
 // GOOGLE_CREDENTIALS_JSON env var when set, otherwise from Credencial.json
-// on disk (legacy manual-container layout).
+// on disk (legacy manual-container layout). The env var accepts raw JSON
+// or base64-encoded JSON (single line, required by Coolify env handling).
 func readCredentials() ([]byte, error) {
-	if raw := os.Getenv("GOOGLE_CREDENTIALS_JSON"); raw != "" {
+	if raw := strings.TrimSpace(os.Getenv("GOOGLE_CREDENTIALS_JSON")); raw != "" {
+		if !strings.HasPrefix(raw, "{") {
+			decoded, err := base64.StdEncoding.DecodeString(raw)
+			if err != nil {
+				return nil, fmt.Errorf("decode GOOGLE_CREDENTIALS_JSON: %w", err)
+			}
+			return decoded, nil
+		}
 		return []byte(raw), nil
 	}
 	return os.ReadFile(credentialFile)
